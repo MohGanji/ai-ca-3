@@ -4,6 +4,7 @@ from collections import defaultdict
 from pprint import pprint
 from PIL import Image
 import glob, sys, os, random, math
+import matplotlib.pyplot as plt 
 
 class Network:
     LEARN_RATE = 1
@@ -46,11 +47,11 @@ class Network:
     def activation_func(self, val, mode="sigmoid"):
         return 1.0/(1.0 + math.exp(-1*val))
 
-    
+    # s*(1-s)    
     def derivative(self, val, mode="sigmoid"):
         return val*(1.0-val)
 
-    def calc_new_node(self, layer, links, biases, j):
+    def calc_new_node(layer, links, biases, j):
         res = biases[j]
         for i, node in enumerate(layer):
             res += node*links[i][j]
@@ -69,7 +70,6 @@ class Network:
             res.append( 0.5*((j-i)**2) )
         return res
 
-    # s*(1-s)
 
     def calc_delta(self, cost, layer):
         res = []
@@ -150,6 +150,7 @@ class Network:
                 new_cost = self.backprop(self.read_image(img), self.map_letter_to_array(letter))
                 pprint(new_cost)
                 self.costs.append(new_cost)
+        plt.plot(self.costs)
         return
 
     def predict(self, input):
