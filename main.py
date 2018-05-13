@@ -3,7 +3,6 @@ import numpy as np
 from collections import defaultdict
 from pprint import pprint
 from PIL import Image
-import glob
 import sys
 import os
 import random
