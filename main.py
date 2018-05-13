@@ -38,13 +38,17 @@ class Network:
     def fill_input(self, pixels):
         width, height, img = pixels
         res = []
-        for i in range(width):
-            for j in range(height):
+        for i in xrange(width):
+            for j in xrange(height):
                 res.append(img[(i, j)]/255.0)
         return res
 
     def activation_func(self, val, mode="sigmoid"):
         return 1.0/(1.0 + math.exp(-1*val))
+
+    
+    def derivative(self, val, mode="sigmoid"):
+        return val*(1.0-val)
 
     def calc_new_node(self, layer, links, biases, j):
         res = biases[j]
@@ -54,30 +58,47 @@ class Network:
 
     def activate(self, layer, links, biases, new_layer_size):
         new_layer = []
-        for i in range(new_layer_size):
+        for i in xrange(new_layer_size):
             z = self.calc_new_node(layer, links, biases, i)
             new_layer.append(self.activation_func(z))
         return new_layer    
 
     def calc_cost(self, output, expected):
-        res = 0
+        res = []
         for i, j in zip(output, expected):
-            res += 0.5*((j-i)**2)
+            res.append( 0.5*((j-i)**2) )
         return res
 
     # s*(1-s)
 
-    def update_links(self, old_links, old_biases, first_layer, second_layer, expected):
-        new_links = [[0*len(old_links[i])] for i in range(old_links)]
-        for k, second_val in enumerate(second_layer):
-            for j, first_val in enumerate(first_layer):
-                z = self.calc_new_node(second_layer, old_links, old_biases, j)
-                new_links[k][j] = old_links[k][j] - self.LEARN_RATE * z * (1.0 - z) * 2.0 * (first_val - second_val)
+    def calc_delta(self, cost, layer):
+        res = []
+        for i, j in zip(cost , layer ):
+            res.append(i * self.derivative(j) )
+        return res
 
+    def matrix_add(self, mat1, mat2):
+        res = [[mat1[i][j] + mat2[i][j]  for j in xrange(len(mat1[0]))] for i in xrange(len(mat1))]
+        return res
+
+    def array_matrix_dot(self, mat1, mat2):
+        res = [[0 for j in xrange(len(mat2)) ] for i in xrange(len(mat1))]
+        for i in xrange(len(mat1)):
+            for j in xrange(len(mat2)):
+                res[i][j] = mat1[i]*mat2[j]
+        return res
+
+    def calc_l1_cost(self, l2_delta, hidden_output):
+        # 1*12 . 12*10 => 1*10:
+        res = [0] * len(hidden_output)
+        for i in xrange(len(hidden_output)):
+            for j in xrange(len(hidden_output[0])):
+                res[i] += l2_delta[j] * hidden_output[i][j]
+        return res
 
     def backprop(self, pixels, expected_output):
         """
-            * pixels: 2 dim array of pixels of an image, each field in range(0, 255)
+            * pixels: 2 dim array of pixels of an image, each field in xrange(0, 255)
             * expected_output:  one dim array with length of output layer, values: (0, 1)
 
             * updates weight of links based on cost of output
@@ -87,16 +108,21 @@ class Network:
         self.input_layer = self.fill_input(pixels)
         self.hidden_layer = self.activate(self.input_layer, self.input_hidden_links, self.hidden_biases, self.hidden_size)
         self.output_layer = self.activate(self.hidden_layer, self.hidden_output_links, self.output_biases, self.output_size)
-        the_cost = self.calc_cost(self.output_layer, expected_output)
+        cost_array = self.calc_cost(self.output_layer, expected_output) # 1*10
         # end of forward propagate
 
         # error backpropagation
-        #self.hidden_output_links, self.output_biases = self.update_links(self.hidden_output_links, self.output_biases, self.output_layer, self.hidden_layer, expected_output)
-        #pprint(hidden_output_links)
-        #self.input_hidden_links, self.hidden_biases = self.update_links(self.input_hidden_links, self.hidden_biases, self.output_layer, self.input_layer, expected_output)
-        # does not work
+        l2_delta = self.calc_delta(cost_array, self.output_layer) # 1*10
+        hidden_output_change = self.array_matrix_dot(self.hidden_layer, l2_delta) # 12*10
+        self.hidden_output_links = self.matrix_add(self.hidden_output_links, hidden_output_change) # 12*10
 
-        return the_cost
+        l1_cost_array = self.calc_l1_cost(l2_delta, self.hidden_output_links) # 1*12 
+        l1_delta = self.calc_delta(l1_cost_array, self.hidden_layer) # 1*12
+        input_hidden_change = self.array_matrix_dot(self.input_layer, l1_delta) # 700*12
+        self.input_hidden_links = self.matrix_add(self.input_hidden_links, input_hidden_change) # 700*12
+        # end of error backpropagation
+
+        return sum(cost_array)
 
     def read_image(self, image_path):
         img = Image.open(image_path)
@@ -122,6 +148,7 @@ class Network:
         for letter, images in dataset.iteritems():
             for img in images:
                 new_cost = self.backprop(self.read_image(img), self.map_letter_to_array(letter))
+                pprint(new_cost)
                 self.costs.append(new_cost)
         return
 
@@ -134,20 +161,20 @@ class Network:
 
 def get_dataset(path):
     filelists = defaultdict(list)
-    for label in range(0,1):
+    for label in xrange(0,1):
         dirname = os.path.join(path, chr(ord('A') + label))
         for file in os.listdir(dirname):
             if (file.endswith('.png')):
                 fullname = os.path.join(dirname, file)
-                if len(filelists[chr(ord('A') + label)]) < 2:
-                    if os.path.getsize(fullname) > 0:
-                        filelists[chr(ord('A') + label)].append(fullname)
-                    else:
-                        print('file ' + fullname + ' is empty')
+                # if len(filelists[chr(ord('A') + label)]) < 2:
+                if os.path.getsize(fullname) > 0:
+                    filelists[chr(ord('A') + label)].append(fullname)
+                else:
+                    print('file ' + fullname + ' is empty')
     return filelists
 
 #   labelsAndFiles = []
-#   for label in range(0,10):
+#   for label in xrange(0,10):
 #     filelist = random.sample(filelists[label], number)
 #     for filename in filelist:
 #       labelsAndFiles.append((label, filename))
