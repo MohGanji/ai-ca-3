@@ -10,7 +10,7 @@ import random
 import math
 import matplotlib.pyplot as plt
 
-EPOCH = 15000
+EPOCH = 10000
 INPUT = 85
 LEARNING_RATE = 0.00001
 LINEAR_FACTOR = 0.008
@@ -18,8 +18,9 @@ TEST_INPUT = 100
 INPUT_SIZE = 784
 HIDDEN_SIZE = 16
 OUTPUT_SIZE = 10
-DROPOUT = True
-DROPOUT_PERCENT = 0.18
+DROPOUT = False
+DROPOUT_PERCENT = 0.01
+SEGMENT_FACTOR = 10
 links0 = []
 links1 = []
 hidden_layer = [0 for i in range(HIDDEN_SIZE)]
@@ -99,38 +100,62 @@ def derivatives_linear(x):
 def calc_cost(exp, out):
 	return ((exp - out)**2)/2
 
-def train():
+def train(mode="GD"):
 	global inputs, expected, links0, links1, INPUT_SIZE, HIDDEN_SIZE, OUTPUT_SIZE, cost, EPOCH, INPUT, output_biases, hidden_biases
 	for epoch in range(EPOCH):
-		#forward
-		hidden_layer = sigmoid(inputs.dot(links0) + hidden_biases)
-		if(DROPOUT):
-        	hidden_layer *= np.random.binomial([np.ones((len(inputs), HIDDEN_SIZE))],1-DROPOUT_PERCENT)[0] * (1.0/(1-DROPOUT_PERCENT))
-		output_layer = sigmoid(hidden_layer.dot(links1) + output_biases)
-		# hidden_layer = linear(inputs.dot(links0) + hidden_biases)
-		# output_layer = linear(hidden_layer.dot(links1) + output_biases)
-		cost.append(np.sum(calc_cost(expected, output_layer))/(INPUT))
-		# pprint(cost[-1])
+		if mode == "GD":
+			#forward
+			hidden_layer = sigmoid(inputs.dot(links0) + hidden_biases)
+			if(DROPOUT):
+				hidden_layer *= np.random.binomial([np.ones((len(inputs), HIDDEN_SIZE))],1-DROPOUT_PERCENT)[0] * (1.0/(1-DROPOUT_PERCENT))
+			output_layer = sigmoid(hidden_layer.dot(links1) + output_biases)
+			# hidden_layer = linear(inputs.dot(links0) + hidden_biases)
+			# output_layer = linear(hidden_layer.dot(links1) + output_biases)
+			cost.append(np.sum(calc_cost(expected, output_layer))/(INPUT))
+			# pprint(cost[-1])
 
-		#backprop
-		output_delta = (expected - output_layer)
-		hidden_delta = output_delta.dot(links1.T) * derivatives_sigmoid(hidden_layer)
-		# hidden_delta = output_delta.dot(links1.T) * derivatives_linear(hidden_layer)
-		links1 += hidden_layer.T.dot(output_delta) * LEARNING_RATE
-		links0 += inputs.T.dot(hidden_delta) * LEARNING_RATE
-		output_biases += np.sum(output_delta, axis=0, keepdims=True) * LEARNING_RATE
-		hidden_biases += np.sum(hidden_delta, axis=0, keepdims=True) * LEARNING_RATE
-		# for ind, out in enumerate(output_layer):
-			# print(str(ind) + ": " + str(out[ind]))
-		# pprint(output_layer)
-		# print("links0: " + str(links0.shape))
-		# print("links1: " + str(links1.shape))
-		# print("hidden_biases: " + str(hidden_biases.shape))
-		# print("output_biases: " + str(output_biases.shape))
-		# print("inputs: " + str(inputs.shape))
-		# print("hidden_layer: " + str(hidden_layer.shape))
-		# print("output_layer: " + str(output_layer.shape))
-		# exit()
+			#backprop
+			output_delta = (expected - output_layer)
+			hidden_delta = output_delta.dot(links1.T) * derivatives_sigmoid(hidden_layer)
+			# hidden_delta = output_delta.dot(links1.T) * derivatives_linear(hidden_layer)
+			links1 += hidden_layer.T.dot(output_delta) * LEARNING_RATE
+			links0 += inputs.T.dot(hidden_delta) * LEARNING_RATE
+			output_biases += np.sum(output_delta, axis=0, keepdims=True) * LEARNING_RATE
+			hidden_biases += np.sum(hidden_delta, axis=0, keepdims=True) * LEARNING_RATE
+			# for ind, out in enumerate(output_layer):
+				# print(str(ind) + ": " + str(out[ind]))
+			# pprint(output_layer)
+			# print("links0: " + str(links0.shape))
+			# print("links1: " + str(links1.shape))
+			# print("hidden_biases: " + str(hidden_biases.shape))
+			# print("output_biases: " + str(output_biases.shape))
+			# print("inputs: " + str(inputs.shape))
+			# print("hidden_layer: " + str(hidden_layer.shape))
+			# print("output_layer: " + str(output_layer.shape))
+			# exit()
+		elif mode=="SGD":
+			for ind in range(0, SEGMENT_FACTOR):
+				#forward
+				inp = np.array(inputs[ind::SEGMENT_FACTOR])
+				expec = np.array(expected[ind::SEGMENT_FACTOR])
+				hidden_layer = sigmoid(inp.dot(links0) + hidden_biases)
+				if(DROPOUT):
+					hidden_layer *= np.random.binomial([np.ones((len(inp), HIDDEN_SIZE))],1-DROPOUT_PERCENT)[0] * (1.0/(1-DROPOUT_PERCENT))
+				output_layer = sigmoid(hidden_layer.dot(links1) + output_biases)
+				# hidden_layer = linear(inp.dot(links0) + hidden_biases)
+				# output_layer = linear(hidden_layer.dot(links1) + output_biases)
+				cost.append(np.sum(calc_cost(expec, output_layer))/(INPUT))
+				# pprint(cost[-1])
+
+				#backprop
+				output_delta = expec - output_layer
+				hidden_delta = output_delta.dot(links1.T) * derivatives_sigmoid(hidden_layer)
+				# hidden_delta = output_delta.dot(links1.T) * derivatives_linear(hidden_layer)
+				links1 += hidden_layer.T.dot(output_delta) * LEARNING_RATE
+				links0 += inp.T.dot(hidden_delta) * LEARNING_RATE
+				output_biases += np.sum(output_delta, axis=0, keepdims=True) * LEARNING_RATE
+				hidden_biases += np.sum(hidden_delta, axis=0, keepdims=True) * LEARNING_RATE
+
 
 		
 
@@ -160,12 +185,12 @@ def predict():
 def main():
 	get_dataset('./notMNIST_small')
 	init_network()
-	train()
+	train(mode="SGD")
 	predict()
-	# plt.plot(cost)
-	# plt.ylabel("error")
-	# plt.xlabel("iteration")
-	# plt.show()
+	plt.plot(cost)
+	plt.ylabel("error")
+	plt.xlabel("iteration")
+	plt.show()
 
 if __name__ == '__main__':
 	main()
