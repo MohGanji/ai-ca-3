@@ -18,6 +18,8 @@ TEST_INPUT = 100
 INPUT_SIZE = 784
 HIDDEN_SIZE = 16
 OUTPUT_SIZE = 10
+DROPOUT = True
+DROPOUT_PERCENT = 0.18
 links0 = []
 links1 = []
 hidden_layer = [0 for i in range(HIDDEN_SIZE)]
@@ -102,6 +104,8 @@ def train():
 	for epoch in range(EPOCH):
 		#forward
 		hidden_layer = sigmoid(inputs.dot(links0) + hidden_biases)
+		if(DROPOUT):
+        	hidden_layer *= np.random.binomial([np.ones((len(inputs), HIDDEN_SIZE))],1-DROPOUT_PERCENT)[0] * (1.0/(1-DROPOUT_PERCENT))
 		output_layer = sigmoid(hidden_layer.dot(links1) + output_biases)
 		# hidden_layer = linear(inputs.dot(links0) + hidden_biases)
 		# output_layer = linear(hidden_layer.dot(links1) + output_biases)
@@ -158,10 +162,10 @@ def main():
 	init_network()
 	train()
 	predict()
-	plt.plot(cost)
-	plt.ylabel("error")
-	plt.xlabel("iteration")
-	plt.show()
+	# plt.plot(cost)
+	# plt.ylabel("error")
+	# plt.xlabel("iteration")
+	# plt.show()
 
 if __name__ == '__main__':
 	main()
