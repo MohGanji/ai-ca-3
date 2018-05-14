@@ -8,10 +8,10 @@ import sys
 import os
 import random
 import math
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
-EPOCH = 60000
-INPUT = 40
+EPOCH = 15000
+INPUT = 85
 LEARNING_RATE = 0.00001
 LINEAR_FACTOR = 0.008
 TEST_INPUT = 100
@@ -127,7 +127,7 @@ def train():
 		# print("hidden_layer: " + str(hidden_layer.shape))
 		# print("output_layer: " + str(output_layer.shape))
 		# exit()
-	# plt.plot(cost)
+
 		
 
 def predict():
@@ -158,6 +158,10 @@ def main():
 	init_network()
 	train()
 	predict()
+	plt.plot(cost)
+	plt.ylabel("error")
+	plt.xlabel("iteration")
+	plt.show()
 
 if __name__ == '__main__':
 	main()
