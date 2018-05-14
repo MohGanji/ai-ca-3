@@ -10,3 +10,5 @@ neural network
 * https://www.youtube.com/watch?v=tIeHLnjs5U8
 * https://github.com/erilyth/Neural-Network-Implementation/blob/master/neuralnet.py
 * https://iamtrask.github.io/2015/07/12/basic-python-network/
+* http://www.wildml.com/2015/09/implementing-a-neural-network-from-scratch/
+* https://www.analyticsvidhya.com/blog/2017/05/neural-network-from-scratch-in-python-and-r/
